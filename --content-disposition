@@ -1,0 +1,232 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Skin Cancer MNIST: HAM10000 | Kaggle</title>
+  <meta charset="utf-8" />
+    <meta name="robots" content="index, follow" />
+  <meta name="description" content="a large collection of multi-source dermatoscopic images of pigmented lesions" />
+  <meta name="turbolinks-cache-control" content="no-cache" />
+    <meta name="keywords" content="health,image data,multiclass classification" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
+  <meta name="theme-color" content="#008ABC" />
+  <script nonce="YAtUYsnJh1VZc1/SByjpgw==" type="text/javascript">
+    window["pageRequestStartTime"] = 1655583925509;
+    window["pageRequestEndTime"] = 1655583925583;
+    window["initialPageLoadStartTime"] = new Date().getTime();
+  </script>
+  <link rel="preconnect" href="https://www.google-analytics.com" crossorigin="anonymous" /><link rel="preconnect" href="https://stats.g.doubleclick.net" /><link rel="preconnect" href="https://storage.googleapis.com" /><link rel="preconnect" href="https://apis.google.com" />
+  <link href="/static/images/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+  <link rel="manifest" href="/static/json/manifest.json" crossorigin="use-credentials">
+
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/icon?family=Google+Material+Icons"
+    rel="preload" as="style" />
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,400i,500,500i,600,600i,700,700i"
+    rel="preload" as="style" />
+  <link href="https://fonts.googleapis.com/icon?family=Google+Material+Icons"
+    rel="stylesheet" media="print" id="async-google-font-1" />
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,400i,500,500i,600,600i,700,700i"
+    rel="stylesheet" media="print" id="async-google-font-2" />
+  <script nonce="YAtUYsnJh1VZc1/SByjpgw==" type="text/javascript">
+    const styleSheetIds = ["async-google-font-1", "async-google-font-2"];
+    styleSheetIds.forEach(function (id) {
+      document.getElementById(id).addEventListener("load", function() {
+        this.media = "all";
+      });
+    });
+  </script>
+
+    <link rel="canonical" href="/kmader/skin-cancer-mnist-ham10000" />
+    <link rel="stylesheet" type="text/css" href="/static/assets/vendor.css?v=75916b9cccfe514b1d11" />
+    <link rel="stylesheet" type="text/css" href="/static/assets/app.css?v=19bbec36655fd4261b5c" />
+  
+    
+ 
+      <script nonce="YAtUYsnJh1VZc1/SByjpgw==">
+        try{(function(a,s,y,n,c,h,i,d,e){d=s.createElement("style");
+        d.appendChild(s.createTextNode(""));s.head.appendChild(d);d=d.sheet;
+        y=y.map(x => d.insertRule(x + "{ opacity: 0 !important }"));
+        h.start=1*new Date;h.end=i=function(){y.forEach(x => x<d.cssRules.length ? d.deleteRule(x) : {})};
+        (a[n]=a[n]||[]).hide=h;setTimeout(function(){i();h.end=null},c);h.timeout=c;
+        })(window,document,['.site-header-react__nav'],'dataLayer',2000,{'GTM-52LNT9S':true});}catch(ex){}
+    </script>
+    <script nonce="YAtUYsnJh1VZc1/SByjpgw==">
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'UA-12629138-1', {
+            'optimize_id': 'GTM-52LNT9S',
+            'displayFeaturesTask': null,
+            'send_page_view': false,
+            'content_group1': 'Datasets'
+        });
+    </script>
+    <script nonce="YAtUYsnJh1VZc1/SByjpgw==" async src="https://www.googletagmanager.com/gtag/js?id=UA-12629138-1"></script>
+
+  
+    
+    <meta property="og:url" content="/kmader/skin-cancer-mnist-ham10000" />
+    <meta property="og:title" content="Skin Cancer MNIST: HAM10000" />
+    <meta property="og:description" content="a large collection of multi-source dermatoscopic images of pigmented lesions" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://storage.googleapis.com/kaggle-datasets-images/54339/103727/d0f9325d9f7d113719887bc22235e5d4/dataset-card.png?t=2018-09-19-17-09-26" />
+    <meta property="fb:app_id" content="2665027677054710" />
+
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@kaggledatasets" />
+        <meta name="twitter:creator" content="@kevinsmader" />
+
+
+  <meta name="twitter:site" content="@Kaggle" /> 
+  
+    
+    <script nonce="YAtUYsnJh1VZc1/SByjpgw==" type="application/ld+json">{"@context":"http://schema.org/","@type":"Dataset","name":"Skin Cancer MNIST: HAM10000","description":"# Overview\nAnother more interesting than digit classification dataset to use to get biology and medicine students more excited about machine learning and image processing. \n\n\n## Original Data  Source\n- Original Challenge: https://challenge2018.isic-archive.com\n- https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/DBW86T\n[1] Noel Codella, Veronica Rotemberg, Philipp Tschandl, M. Emre Celebi, Stephen Dusza, David Gutman, Brian Helba, Aadi Kalloo, Konstantinos Liopyris, Michael Marchetti, Harald Kittler, Allan Halpern: “Skin Lesion Analysis Toward Melanoma Detection 2018: A Challenge Hosted by the International Skin Imaging Collaboration (ISIC)”, 2018; https://arxiv.org/abs/1902.03368\n\n[2] Tschandl, P., Rosendahl, C. &amp; Kittler, H. The HAM10000 dataset, a large collection of multi-source dermatoscopic images of common pigmented skin lesions. Sci. Data 5, 180161 doi:10.1038/sdata.2018.161 (2018).\n\n## From Authors\n\nTraining of neural networks for automated diagnosis of pigmented skin lesions is hampered by the small size and lack of diversity of available dataset of dermatoscopic images. We tackle this problem by releasing the HAM10000 (\"Human Against Machine with 10000 training images\") dataset. We collected dermatoscopic images from different populations, acquired and stored by different modalities. The final dataset consists of 10015 dermatoscopic images which can serve as a training set for academic machine learning purposes. Cases include a representative collection of all important diagnostic categories in the realm of pigmented lesions: Actinic keratoses and intraepithelial carcinoma / Bowen's disease (akiec), basal cell carcinoma (bcc), benign keratosis-like lesions (solar lentigines / seborrheic keratoses and lichen-planus like keratoses, bkl), dermatofibroma (df), melanoma (mel), melanocytic nevi (nv) and vascular lesions (angiomas, angiokeratomas, pyogenic granulomas and hemorrhage, vasc).\n\nMore than 50% of lesions are confirmed through histopathology (histo), the ground truth for the rest of the cases is either follow-up examination (follow_up), expert consensus (consensus), or confirmation by in-vivo confocal microscopy (confocal). The dataset includes lesions with multiple images, which can be tracked by the lesion_id-column within the HAM10000_metadata file.\n\nThe test set is not public, but the evaluation server remains running (see the challenge website). Any publications written using the HAM10000 data should be evaluated on the official test set hosted there, so that methods can be fairly compared.","url":"https://www.kaggle.com/kmader/skin-cancer-mnist-ham10000","version":2,"keywords":["subject, health and fitness, health","data type, image data","technique, classification, multiclass classification"],"license":{"@type":"CreativeWork","name":"CC BY-NC-SA 4.0","url":"https://creativecommons.org/licenses/by-nc-sa/4.0/"},"identifier":["54339"],"includedInDataCatalog":{"@type":"DataCatalog","name":"Kaggle","url":"https://www.kaggle.com"},"creator":{"@type":"Person","name":"K Scott Mader","url":"https://www.kaggle.com/kmader","image":"https://storage.googleapis.com/kaggle-avatars/thumbnails/67483-kg.jpg"},"distribution":[{"@type":"DataDownload","requiresSubscription":true,"encodingFormat":"zip","fileFormat":"zip","contentUrl":"https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000/download","contentSize":"5582914511 bytes"}],"commentCount":15,"dateModified":"2018-09-20T20:36:13.037Z","discussionUrl":"https://www.kaggle.com/kmader/skin-cancer-mnist-ham10000/discussion","alternateName":"a large collection of multi-source dermatoscopic images of pigmented lesions","isAccessibleForFree":true,"thumbnailUrl":"https://storage.googleapis.com/kaggle-datasets-images/54339/103727/d0f9325d9f7d113719887bc22235e5d4/dataset-card.png?t=2018-09-19-17-09-26","interactionStatistic":[{"@type":"InteractionCounter","interactionType":"http://schema.org/CommentAction","userInteractionCount":15},{"@type":"InteractionCounter","interactionType":"http://schema.org/DownloadAction","userInteractionCount":61192},{"@type":"InteractionCounter","interactionType":"http://schema.org/ViewAction","userInteractionCount":498793},{"@type":"InteractionCounter","interactionType":"http://schema.org/LikeAction","userInteractionCount":1364}]}</script>
+
+
+  
+    
+
+  
+    
+    
+<script nonce="YAtUYsnJh1VZc1/SByjpgw==" type="text/javascript">
+    var Kaggle = window.Kaggle || {};
+
+    Kaggle.Current = {
+        antiForgeryToken: 'CfDJ8Cs-Lz1EcsZJoJpPxm8uGgA31BNEvFb4vGPxd_ntR7aU8GDABcrKSxzAygfjyEBZjvK1rZBGJvpto6q9vQH_-oErK7fZXxMcTwoZ438VRt0d5w',
+        isAnonymous: true,
+        analyticsToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NTU1ODQ4MjUsIlVzZXJJZCI6MH0.iWqbd6cjVqMEK9caoaLYK0HFgrl_IBlaoZI-NSnqjrw',
+        analyticsTokenExpiry: 15,
+        
+        
+        
+        
+        
+        
+        
+        enableRapidash: true, 
+        
+    }
+        Kaggle.Current.log = function(){};
+        Kaggle.Current.warn = function(){};
+
+    const decodeUserProperty = function (escapedUserProperty) {
+        escapedUserProperty = escapedUserProperty || "";
+        try {
+            const textVersion = new DOMParser().parseFromString(escapedUserProperty, "text/html").documentElement.textContent;
+            if (textVersion) {
+                return textVersion;
+            }
+        } catch(ex) {}
+        return escapedUserProperty;
+    }
+    Kaggle.Current.userDisplayName = decodeUserProperty(Kaggle.Current.userDisplayNameEscaped);
+    Kaggle.Current.userEmail = decodeUserProperty(Kaggle.Current.userEmailEscaped); 
+</script>
+
+    
+
+<script nonce="YAtUYsnJh1VZc1/SByjpgw==" type="text/javascript">
+    var Kaggle = window.Kaggle || {};
+    Kaggle.PageMessages = [];
+</script>
+
+
+
+    <script nonce="YAtUYsnJh1VZc1/SByjpgw==">window['useKaggleAnalytics'] = true;</script>
+
+  <script id="gapi-target" nonce="YAtUYsnJh1VZc1/SByjpgw==" src="https://apis.google.com/js/api.js" defer
+    async></script>
+  <script nonce="YAtUYsnJh1VZc1/SByjpgw==" src="/static/assets/runtime.js?v=1fa1faef55a3301ae80a" data-turbolinks-track="reload"></script>
+  <script nonce="YAtUYsnJh1VZc1/SByjpgw==" src="/static/assets/vendor.js?v=1abae0bc5a9d72e7b94f" data-turbolinks-track="reload"></script>
+  <script nonce="YAtUYsnJh1VZc1/SByjpgw==" src="/static/assets/app.js?v=1b2a6beee1f6de142b72" data-turbolinks-track="reload"></script>
+    <script nonce="YAtUYsnJh1VZc1/SByjpgw==" type="text/javascript">
+      window.kaggleStackdriverConfig = {
+        key: 'AIzaSyA4eNqUdRRskJsCZWVz-qL655Xa5JEMreE',
+        projectId: 'kaggle-161607',
+        service: 'web-fe',
+        version: 'ci',
+        userId: '0'
+      }
+    </script>
+</head>
+
+<body data-turbolinks="false">
+  <main>
+    
+
+
+
+
+
+
+<div id="site-container"></div>
+<div data-component-name="NavigationContainer" style="display: flex; flex-direction: column; flex: 1 0 auto;"></div><script class="kaggle-component" nonce="YAtUYsnJh1VZc1/SByjpgw==">var Kaggle=window.Kaggle||{};Kaggle.State=Kaggle.State||[];Kaggle.State.push({"navigationType":"BOTH_NAV"});performance && performance.mark && performance.mark("NavigationContainer.componentCouldBootstrap");</script>
+<div id="site-body" class="hide">
+    
+
+<div data-component-name="DatasetMaterialContainer" style="display: flex; flex-direction: column; flex: 1 0 auto;"></div><script class="kaggle-component" nonce="YAtUYsnJh1VZc1/SByjpgw==">var Kaggle=window.Kaggle||{};Kaggle.State=Kaggle.State||[];Kaggle.State.push({"basics":{"datasetId":54339,"slug":"skin-cancer-mnist-ham10000","title":"Skin Cancer MNIST: HAM10000","description":"# Overview\nAnother more interesting than digit classification dataset to use to get biology and medicine students more excited about machine learning and image processing. \n\n\n## Original Data  Source\n- Original Challenge: https://challenge2018.isic-archive.com\n- https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/DBW86T\n[1] Noel Codella, Veronica Rotemberg, Philipp Tschandl, M. Emre Celebi, Stephen Dusza, David Gutman, Brian Helba, Aadi Kalloo, Konstantinos Liopyris, Michael Marchetti, Harald Kittler, Allan Halpern: \u201CSkin Lesion Analysis Toward Melanoma Detection 2018: A Challenge Hosted by the International Skin Imaging Collaboration (ISIC)\u201D, 2018; https://arxiv.org/abs/1902.03368\n\n[2] Tschandl, P., Rosendahl, C. \u0026 Kittler, H. The HAM10000 dataset, a large collection of multi-source dermatoscopic images of common pigmented skin lesions. Sci. Data 5, 180161 doi:10.1038/sdata.2018.161 (2018).\n\n## From Authors\n\nTraining of neural networks for automated diagnosis of pigmented skin lesions is hampered by the small size and lack of diversity of available dataset of dermatoscopic images. We tackle this problem by releasing the HAM10000 (\u0022Human Against Machine with 10000 training images\u0022) dataset. We collected dermatoscopic images from different populations, acquired and stored by different modalities. The final dataset consists of 10015 dermatoscopic images which can serve as a training set for academic machine learning purposes. Cases include a representative collection of all important diagnostic categories in the realm of pigmented lesions: Actinic keratoses and intraepithelial carcinoma / Bowen\u0027s disease (akiec), basal cell carcinoma (bcc), benign keratosis-like lesions (solar lentigines / seborrheic keratoses and lichen-planus like keratoses, bkl), dermatofibroma (df), melanoma (mel), melanocytic nevi (nv) and vascular lesions (angiomas, angiokeratomas, pyogenic granulomas and hemorrhage, vasc).\n\nMore than 50% of lesions are confirmed through histopathology (histo), the ground truth for the rest of the cases is either follow-up examination (follow_up), expert consensus (consensus), or confirmation by in-vivo confocal microscopy (confocal). The dataset includes lesions with multiple images, which can be tracked by the lesion_id-column within the HAM10000_metadata file.\n\nThe test set is not public, but the evaluation server remains running (see the challenge website). Any publications written using the HAM10000 data should be evaluated on the official test set hosted there, so that methods can be fairly compared.","viewCount":498793,"downloadCount":61192,"scriptCount":295,"topicCount":15,"owner":{"id":67483,"imageUrl":"https://storage.googleapis.com/kaggle-avatars/thumbnails/67483-kg.jpg","name":"K Scott Mader","profileUrl":"/kmader","slug":"kmader","userTier":"GRANDMASTER"},"license":{"id":3,"name":"CC BY-NC-SA 4.0","url":"https://creativecommons.org/licenses/by-nc-sa/4.0/"},"overview":"a large collection of multi-source dermatoscopic images of pigmented lesions","collaboratorList":{"owner":{"userId":67483,"profileUrl":"/kmader","thumbnailUrl":"https://storage.googleapis.com/kaggle-avatars/thumbnails/67483-kg.jpg","name":"K Scott Mader","slug":"kmader","userTier":"GRANDMASTER","type":"OWNER"}},"coverImageUrl":"https://storage.googleapis.com/kaggle-datasets-images/54339/103727/d0f9325d9f7d113719887bc22235e5d4/dataset-cover.png?t=2018-09-19-17-09-26","data":{"totalSize":5582914511,"isFileset":true,"canSeeDownload":true,"firestorePath":"MKrwzmcvDllwIufUt9kC/versions/DZXHwZ4LMaBOkeo9QEMn","downloadUrl":"/datasets/kmader/kmader/download?datasetVersionNumber=2","versionId":111874,"id":58629},"voteCount":1364,"medalUrl":"/static/images/medals/datasets/goldl@2x.png","downloadUrl":"/datasets/kmader/skin-cancer-mnist-ham10000/download","lastUpdateTime":"2018-09-20T20:36:13.037Z","datasetVersionNumber":2,"creatorDisplayName":"K Scott Mader","cardImageUrl":"https://storage.googleapis.com/kaggle-datasets-images/54339/103727/d0f9325d9f7d113719887bc22235e5d4/dataset-card.png?t=2018-09-19-17-09-26","categories":{"tags":[{"id":11111,"name":"health","fullPath":"subject \u003E health and fitness \u003E health","listingUrl":"/datasets?group=public\u0026tagids=11111","description":"Consider the health tag your data science gym. Get in there and work out those data science muscles on health analytics. Analyze heart disease until you sweat. Then recover with with a nice candy production dataset.","datasetCount":6299,"competitionCount":4,"notebookCount":7509,"tagUrl":"/tags/health","displayName":"Health"},{"id":14102,"name":"image data","fullPath":"data type \u003E image data","listingUrl":"/datasets?group=public\u0026tagids=14102","description":"","datasetCount":3889,"competitionCount":113,"notebookCount":4033,"tagUrl":"/tags/image-data","displayName":"Image Data"},{"id":14202,"name":"multiclass classification","fullPath":"technique \u003E classification \u003E multiclass classification","listingUrl":"/datasets?group=public\u0026tagids=14202","description":"","datasetCount":745,"competitionCount":48,"notebookCount":2626,"tagUrl":"/tags/multiclass-classification","displayName":"Multiclass Classification"}]},"datasetExternalUrl":"https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000","ownerTwitter":"kevinsmader","forumId":63066,"datasetVersionId":104884,"canCreateTasks":true,"moderationStatus":"PRIVATED_MODERATION_STATUS_NO_ABUSE","lastVersionNumber":2,"diffType":"VERSIONED"},"@wf": "Datasets.DatasetMaterialDtoWireFormat3"});performance && performance.mark && performance.mark("DatasetMaterialContainer.componentCouldBootstrap");</script>
+<script nonce="YAtUYsnJh1VZc1/SByjpgw==" type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    "HTML-CSS": {
+    preferredFont: "TeX",
+    availableFonts: ["STIX", "TeX"],
+    linebreaks: {
+    automatic: true
+    },
+    EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50)
+    },
+    tex2jax: {
+    inlineMath: [["\\(", "\\)"], ["\\\\(", "\\\\)"]],
+    displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+    processEscapes: true,
+    ignoreClass: "tex2jax_ignore|dno"
+    },
+    TeX: {
+    noUndefined: {
+    attributes: {
+    mathcolor: "red",
+    mathbackground: "#FFEEEE",
+    mathsize: "90%"
+    }
+    }
+    },
+    Macros: {
+    href: "{}"
+    },
+    skipStartupTypeset: true,
+    messageStyle: "none",
+    extensions: [],
+    });
+</script>
+<script type="text/javascript" nonce="YAtUYsnJh1VZc1/SByjpgw==">
+  window.addEventListener("DOMContentLoaded", () => {
+    const head = document.getElementsByTagName("head")[0];
+    const useProdHosts = ["www.kaggle.com", "admin.kaggle.com"];
+    const subdomain = useProdHosts.includes(window.location.hostname) ? "www" : "staging";
+
+    const lib = document.createElement("script");
+    lib.type = "text/javascript";
+    lib.src = `https://${subdomain}.kaggleusercontent.com/static/mathjax/2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML`;
+    head.appendChild(lib);
+  });
+</script>
+
+
+
+
+
+</div>
+
+
+
+
+  </main>
+</body>
+
+</html>
