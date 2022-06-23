@@ -1,1 +1,15 @@
-import pandas as pdimport osimport pickleimport matplotlib.pyplot as pltG_save = '/Users/sepehrbe/My Drive/DataSources/SkinCare/Saved/'G_path = '/Users/sepehrbe/Google_Drive/DataSources/SkinCare/'files = list(os.listdir(G_save))Grid = 'CNN_Grid_Searc_Details_19_Jun_2022_02_51.csv'CV = 'CV_Regularization_Details_16_Jun_2022_11:01.csv'# Grid_Search = pickle.load(open(G_save + f , 'rb') )CNN_Grid_Searc = pd.read_csv(G_save+Grid)CNN_CV = pd.read_csv(G_save+CV)
+import pandas as pd
+import os
+import pickle
+import matplotlib.pyplot as plt
+from CNN_NETs import CNN_Nets
+import torch
+
+
+G_path = '/Users/sepehrbe/My_Drive/DataSources/SkinCare'
+G_saved = G_path+ '/Saved/'
+G_Grid = G_path+ '/Saved/Grid_Search_Results'
+
+files = list(os.listdir(G_Grid))
+f = 'CNN_280x210_Model3_21_Jun22_15-01'
+GridSrach = pickle.load(open(G_Grid + '/' + f , 'rb'))
