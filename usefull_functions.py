@@ -1,6 +1,10 @@
-from sklearn import *
-import sklearn as sk
 
+import sklearn as sk
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from statistics import mean
+import numpy as np
 
 def model_evaluation(Y,Y_pred):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
@@ -46,3 +50,9 @@ def plot_loss_accuracy(model_):
     axs[1].legend()
     axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
     plt.show()
+
+
+remap = {0:1 , 1:1, 4:1, 2:0, 3:0, 5:0, 6:0}
+def label_to_binary(entry):
+    return remap[entry] if entry in remap else entry
+label_to_binary = np.vectorize(label_to_binary)
