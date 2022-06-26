@@ -393,6 +393,7 @@ class CNN_Nets:
         out = self.Act(self.fc1(out))
         out = self.fc2(out)
         return out
+
   class Net8_b(nn.Module):
     def __init__(self,drop_out):
         super().__init__()
@@ -427,6 +428,85 @@ class CNN_Nets:
         out = self.Act(self.pool2(out))
         out = self.Act(self.conv3(out))
         out = self.Act(self.pool3(out))
+        out = torch.flatten(out, 1) 
+        out = self.Act(self.fc1(out))
+        out = self.fc2(out)
+        return out
+
+  class Net8_b_binary(nn.Module):
+    def __init__(self,drop_out):
+        super().__init__()
+        self.conv1 = nn.Conv2d( in_channels=3 , out_channels=64, stride = 2 , kernel_size=(3, 3))
+        self.pool1 = nn.MaxPool2d( kernel_size = (3,3), stride = 2, padding = 0 )
+        self.conv2 = nn.Conv2d( in_channels=64, out_channels=128, stride = 2 , kernel_size=(3, 3))
+        self.pool2 = nn.MaxPool2d( kernel_size = (3,3), stride = 2, padding = 0 )
+        self.conv3 = nn.Conv2d( in_channels=128, out_channels=256, stride = 2 , kernel_size=(3, 3))
+        self.pool3 = nn.MaxPool2d( kernel_size = (3,3), stride = 2, padding = 0 )
+        self.fc1   = nn.Linear(in_features= 1536 , out_features = 128)
+        self.fc2   = nn.Linear(in_features= 128 , out_features = 2)
+        self.Act   = nn.LeakyReLU(inplace=True)
+        self.dropout = nn.Dropout(drop_out)
+    def forward(self, x):
+        out = self.Act(self.conv1(x))
+        out = self.Act(self.pool1(out))
+        out = self.dropout(out)
+        out = self.Act(self.conv2(out))
+        out = self.Act(self.pool2(out))
+        out = self.dropout(out)
+        out = self.Act(self.conv3(out))
+        out = self.Act(self.pool3(out))
+        out = self.dropout(out)
+        out = torch.flatten(out, 1) 
+        out = self.Act(self.fc1(out))
+        out = self.fc2(out)
+        return out
+    def forward_noDrop(self, x):
+        out = self.Act(self.conv1(x))
+        out = self.Act(self.pool1(out))
+        out = self.Act(self.conv2(out))
+        out = self.Act(self.pool2(out))
+        out = self.Act(self.conv3(out))
+        out = self.Act(self.pool3(out))
+        out = torch.flatten(out, 1) 
+        out = self.Act(self.fc1(out))
+        out = self.fc2(out)
+        return out
+
+
+  class Net8_a_binary(nn.Module):
+    def __init__(self,drop_out):
+        super().__init__()
+        self.conv1 = nn.Conv2d( in_channels=3 , out_channels=64, stride = 2 , kernel_size=(3, 3))
+        self.pool1 = nn.MaxPool2d( kernel_size = (3,3), stride = 2, padding = 0 )
+        self.conv2 = nn.Conv2d( in_channels=64, out_channels=128, stride = 2 , kernel_size=(3, 3))
+        self.pool2 = nn.MaxPool2d( kernel_size = (3,3), stride = 2, padding = 0 )
+        self.conv3 = nn.Conv2d( in_channels=128, out_channels=256, stride = 2 , kernel_size=(3, 3))
+        self.pool3 = nn.MaxPool2d( kernel_size = (3,3), stride = 2, padding = 0 )
+        self.fc1   = nn.Linear(in_features= 1536 , out_features = 128)
+        self.fc2   = nn.Linear(in_features= 128 , out_features = 2)
+        self.Act   = nn.LeakyReLU()
+        self.dropout = nn.Dropout(drop_out)
+    def forward(self, x):
+        out = self.Act(self.conv1(x))
+        out = self.pool1(out)
+        out = self.dropout(out)
+        out = self.Act(self.conv2(out))
+        out = self.pool2(out)
+        out = self.dropout(out)
+        out = self.Act(self.conv3(out))
+        out = self.pool3(out)
+        out = self.dropout(out)
+        out = torch.flatten(out, 1) 
+        out = self.Act(self.fc1(out))
+        out = self.fc2(out)
+        return out
+    def forward_noDrop(self, x):
+        out = self.Act(self.conv1(x))
+        out = self.pool1(out)
+        out = self.Act(self.conv2(out))
+        out = self.pool2(out)
+        out = self.Act(self.conv3(out))
+        out = self.pool3(out)
         out = torch.flatten(out, 1) 
         out = self.Act(self.fc1(out))
         out = self.fc2(out)
