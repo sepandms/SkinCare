@@ -9,15 +9,16 @@ import numpy as np
 from tqdm import tqdm
 import json
 
-def model_evaluation(Y,Y_pred):
+def model_evaluation(Y,Y_pred,title='Confusion Matrix'):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
     print('Nr. of Data : \n', CM.sum())
     print('Accuracy of The Model : \n', np.diag(CM).sum()/CM.sum())
-    sk.metrics.ConfusionMatrixDisplay(CM).plot()
     disp = sk.metrics.ConfusionMatrixDisplay(CM)
     disp.plot()
     disp.im_.colorbar.remove()
-    # plt.title('CNN-Rescaled', fontsize = 16)
+    font = {'family' : 'normal','size'   : 14}
+    plt.rc('font', **font)
+    plt.title(title, fontsize = 16)
     plt.xlabel('Predicted', fontsize = 14)
     plt.ylabel('True', fontsize = 14)
     plt.show()
@@ -166,6 +167,8 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                                         ,'valid_specificity_simple':valid_specificity_simple,'test_specificity_simple':test_specificity_simple,'train_index':train_index,'valid_index':valid_index}, name='')
                     Param_Details = Param_Details.append(new_row)
             else:
+                    progressbar(iter,total_iter, "Interations: ", 100)
+                    iter +=1
                     x_train_ = X_train
                     y_train_ = Y_train
                     x_valid_ = X_valid
