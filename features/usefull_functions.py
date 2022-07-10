@@ -16,7 +16,7 @@ def model_evaluation(Y,Y_pred,title='Confusion Matrix'):
     disp = sk.metrics.ConfusionMatrixDisplay(CM)
     disp.plot()
     disp.im_.colorbar.remove()
-    font = {'family' : 'normal','size'   : 14}
+    font = {'size'   : 14}
     plt.rc('font', **font)
     plt.title(title, fontsize = 16)
     plt.xlabel('Predicted', fontsize = 14)
@@ -40,6 +40,34 @@ def model_evaluation(Y,Y_pred,title='Confusion Matrix'):
     cols = ['weights','Precision','Recall_Sensitivity','Specificity','f1_score']
     per_details = Performance_DF[cols].style.format({'weights': "{:.1%}",'Precision': "{:.1%}",'Recall_Sensitivity': "{:.1%}",'Specificity': "{:.1%}",'f1_score': "{:.1%}"})
     return per_details
+
+
+def confusion_matrix(Y,Y_pred):
+    CM = sk.metrics.confusion_matrix(Y,Y_pred)
+    print('Nr. of Data : \n', CM.sum())
+    print('Accuracy of The Model : \n', np.diag(CM).sum()/CM.sum())
+    sk.metrics.ConfusionMatrixDisplay(CM).plot()
+    FP = CM.sum(axis=0) - np.diag(CM) 
+    FN = CM.sum(axis=1) - np.diag(CM)
+    TP = np.diag(CM)
+    TN = CM.sum() - (FP + FN + TP)
+    weights = CM.sum(axis=1) / CM.sum() 
+    ACC = np.nan_to_num((TP+TN)/(TP+FP+FN+TN) , nan=0)
+    Recall_Sensitivity = np.nan_to_num(TP/(TP+FN) , nan=0)
+    Specificity = np.nan_to_num(TN/(TN+FP) , nan=0)
+    Precision = np.nan_to_num(TP/(TP+FP) , nan=0)
+    f1_score = np.nan_to_num( 2*Precision*Recall_Sensitivity / (Recall_Sensitivity + Precision), nan=0)
+    Performance_DF = pd.concat([pd.DataFrame(CM),pd.DataFrame(weights, columns=['weights']),pd.DataFrame(Precision, columns=['Precision']),pd.DataFrame(Recall_Sensitivity,columns=['Recall_Sensitivity'])
+        ,pd.DataFrame(Specificity, columns=['Specificity']),pd.DataFrame(f1_score, columns=['f1_score'])], axis=1)
+    total_row1 = pd.Series({'Precision':mean(Precision),'Recall_Sensitivity':mean(Recall_Sensitivity),'Specificity':mean(Specificity),'f1_score':mean(f1_score)}, name='Simple Avg.')
+    total_row2 = pd.Series({'Precision':sum(weights*Precision),'Recall_Sensitivity':sum(weights*Recall_Sensitivity),'Specificity':sum(weights*Specificity),'f1_score':sum(weights*f1_score)}, name='Weighted Avg.')
+    Performance_DF = Performance_DF.append([total_row1,total_row2])
+    cols = ['weights','Precision','Recall_Sensitivity','Specificity','f1_score']
+    per_details = Performance_DF[cols].style.format({'weights': "{:.1%}",'Precision': "{:.1%}",'Recall_Sensitivity': "{:.1%}",'Specificity': "{:.1%}",'f1_score': "{:.1%}"})
+    return per_details
+
+
+
 
 def plot_loss_accuracy(model_):
     epochs_X = [i for i in range(1, model_.epochs+1)]
@@ -125,7 +153,9 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                                   ,'valid_specificity_simple','test_specificity_simple','train_index','valid_index'])
     
     grid_params = sk.model_selection.ParameterGrid(grid)
-    total_iter = nr_repeat*len(grid_params)*kflods.get_n_splits()
+    if cross_valid:
+        total_iter = nr_repeat*len(grid_params)*kflods.get_n_splits()
+    else: total_iter = nr_repeat*len(grid_params)
     iter = 1
     for i in range(nr_repeat):
         for g in grid_params:
@@ -213,3 +243,58 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
     print(sk.metrics.classification_report(Y_test,Y_pred))
     print('Best param: ' , best_param)
     return Best_Model, Param_Details
+
+def fpr_tpr_score(Y_OneH,Y_pred_prob):
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    thresh = dict()
+    n_classes = Y_OneH.shape[1]
+    
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = sk.metrics.roc_curve(Y_OneH[:, i], Y_pred_prob[:, i])
+        roc_auc[i] = sk.metrics.auc(fpr[i], tpr[i])
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+    # Compute micro-average ROC curve and ROC area
+    fpr["micro"], tpr["micro"], _ = sk.metrics.roc_curve(Y_OneH.ravel(), Y_pred_prob.ravel())
+    roc_auc["micro"] = sk.metrics.auc(fpr["micro"], tpr["micro"])       
+    # Then interpolate all ROC curves at this points
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(n_classes):
+        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+
+    # Finally average it and compute AUC
+    mean_tpr /= n_classes
+
+    fpr["macro"] = all_fpr
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = sk.metrics.auc(fpr["macro"], tpr["macro"])
+    return fpr, tpr, roc_auc
+
+# Process of plotting roc-auc curve belonging to all classes.
+def plot_roc_auc_multi(fpr, tpr, roc_auc):
+
+    n_classes = fpr.keys().__len__() -2
+
+    # Plot all ROC curves
+    fig = plt.figure(figsize=(7,5))
+    plt.plot(fpr["micro"], tpr["micro"],
+            label=f'micro ({roc_auc["micro"]:0.2f})' 
+            ,color='deeppink', linestyle=':', linewidth=4)
+
+    plt.plot(fpr["macro"], tpr["macro"],
+            label=f'macro ({roc_auc["macro"]:0.2f})'
+            ,color='navy', linestyle=':', linewidth=4)
+
+    for i in range(n_classes):  
+        plt.plot(fpr[i], tpr[i], linestyle='--', 
+                label=f'{i} ({roc_auc[i]:0.2f})')
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC: Multi-Class')
+    plt.legend(loc="lower right")
+    plt.show()
