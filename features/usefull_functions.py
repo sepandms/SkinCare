@@ -145,6 +145,212 @@ def progressbar(n,tot, prefix="", size=60, out=sys.stdout):
     show(n)
     out.flush()
 
+def fpr_tpr_score(Y_OneH,Y_pred_prob):
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    thresh = dict()
+    n_classes = Y_OneH.shape[1]
+    
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = sk.metrics.roc_curve(Y_OneH[:, i], Y_pred_prob[:, i])
+        roc_auc[i] = sk.metrics.auc(fpr[i], tpr[i])
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+    # Compute micro-average ROC curve and ROC area
+    fpr["micro"], tpr["micro"], _ = sk.metrics.roc_curve(Y_OneH.ravel(), Y_pred_prob.ravel())
+    roc_auc["micro"] = sk.metrics.auc(fpr["micro"], tpr["micro"])       
+    # Then interpolate all ROC curves at this points
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(n_classes):
+        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+
+    # Finally average it and compute AUC
+    mean_tpr /= n_classes
+
+    fpr["macro"] = all_fpr
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = sk.metrics.auc(fpr["macro"], tpr["macro"])
+    return fpr, tpr, roc_auc
+
+# Process of plotting roc-auc curve belonging to all classes.
+def plot_roc_auc_multi(fpr, tpr, roc_auc):
+
+    n_classes = fpr.keys().__len__() -2
+
+    # Plot all ROC curves
+    fig = plt.figure(figsize=(7,5))
+    plt.plot(fpr["micro"], tpr["micro"],
+            label=f'micro ({roc_auc["micro"]:0.2f})' 
+            ,color='deeppink', linestyle=':', linewidth=4)
+
+    plt.plot(fpr["macro"], tpr["macro"],
+            label=f'macro ({roc_auc["macro"]:0.2f})'
+            ,color='navy', linestyle=':', linewidth=4)
+
+    for i in range(n_classes):  
+        plt.plot(fpr[i], tpr[i], linestyle='--', 
+                label=f'{i} ({roc_auc[i]:0.2f})')
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC: Multi-Class')
+    plt.legend(loc="lower right")
+    plt.show()
+
+def recall_specificity(Y,Y_pred, type):
+    CM = sk.metrics.confusion_matrix(Y,Y_pred)
+    FP = CM.sum(axis=0) - np.diag(CM) 
+    FN = CM.sum(axis=1) - np.diag(CM)
+    TP = np.diag(CM)
+    TN = CM.sum() - (FP + FN + TP)
+    weights = CM.sum(axis=1) / CM.sum() 
+    ACC = np.nan_to_num((TP+TN)/(TP+FP+FN+TN) , nan=0)
+    Recall_Sensitivity = np.nan_to_num(TP/(TP+FN) , nan=0)
+    Specificity = np.nan_to_num(TN/(TN+FP) , nan=0)
+    Precision = np.nan_to_num(TP/(TP+FP) , nan=0)
+    f1_score = np.nan_to_num( 2*Precision*Recall_Sensitivity / (Recall_Sensitivity + Precision), nan=0)
+    Performance_DF = pd.concat([pd.DataFrame(CM),pd.DataFrame(weights, columns=['weights']),pd.DataFrame(Precision, columns=['Precision']),pd.DataFrame(Recall_Sensitivity,columns=['Recall_Sensitivity'])
+        ,pd.DataFrame(Specificity, columns=['Specificity']),pd.DataFrame(f1_score, columns=['f1_score'])], axis=1)
+    total_row1 = pd.Series({'Precision':mean(Precision),'Recall_Sensitivity':mean(Recall_Sensitivity),'Specificity':mean(Specificity),'f1_score':mean(f1_score)}, name='Simple Avg.')
+    total_row2 = pd.Series({'Precision':sum(weights*Precision),'Recall_Sensitivity':sum(weights*Recall_Sensitivity),'Specificity':sum(weights*Specificity),'f1_score':sum(weights*f1_score)}, name='Weighted Avg.')
+    Performance_DF = Performance_DF.append([total_row1,total_row2])
+    cols = ['weights','Precision','Recall_Sensitivity','Specificity','f1_score']
+    return Performance_DF
+
+
+
+class Model_Training_with_loader:
+
+    def __init__(self, Net, Drop, LR, batch_size , Momentum, epochs,patience, weight_decay, loss_func, opt_func,w_sampler, trainDataset, validDataset,testDataset, X_test,Y_test, print_epochs,hyper_params,device):    
+        
+        self.model = Net(Drop).to(device)
+        if opt_func is torch.optim.Adam:
+            self.opt = opt_func(self.model.parameters(), lr=LR, weight_decay=weight_decay)
+        else:
+            self.opt = opt_func(self.model.parameters(), lr=LR,momentum=Momentum, weight_decay=weight_decay)
+
+        self.loss_func = loss_func()
+        self.epochs = epochs
+        self.patience = patience
+        self.print_epochs = print_epochs
+        self.batch_size = batch_size
+        self.Epochs_Train_loss = []
+        self.Epochs_Train_Acc = []
+        self.Epochs_Val_loss = []
+        self.Epochs_Val_Acc = []
+        self.Epochs_test_loss = []
+        self.Epochs_test_Acc = []
+        self.hyper_params = hyper_params
+        self.Y_test = Y_test
+        self.X_test = X_test
+        self.train_loader = DataLoader(dataset = trainDataset , sampler = w_sampler, batch_size = self.batch_size, num_workers=4)
+        self.valid_loader = DataLoader(dataset = validDataset , shuffle=True, batch_size = self.batch_size, num_workers=2)
+        self.test_loader = DataLoader(dataset = testDataset , shuffle=True, batch_size = self.batch_size, num_workers=2)
+        self.device = device
+
+    def train(self):
+        
+        model = self.model
+        loss_fn = self.loss_func
+        opt = self.opt 
+        batch_size = self.batch_size
+        min_loss = 100
+        iters = 0
+
+        for epoch in range(1, self.epochs+1 ):
+            start_time=time.time()
+            steps_train_loss = []
+            steps_train_Acc = []
+            steps_val_loss = []
+            steps_val_Acc = []
+            steps_test_loss = []
+            steps_test_Acc = []
+            torch.cuda.empty_cache()
+            for batch, (X, Y) in enumerate(self.train_loader):
+                X = X.to(self.device)
+                Y = Y.to(self.device)
+                opt.zero_grad()
+                model.train()
+                y_pred = model.forward(X)
+                loss = loss_fn(y_pred, Y)
+                loss.backward()
+                opt.step()
+                y_pred = y_pred.argmax(axis=1)
+                nr_of_corrects = (y_pred == Y).sum().item()
+                step_acc = nr_of_corrects / batch_size
+                steps_train_Acc.append(step_acc)
+                steps_train_loss.append(loss.item())
+                
+                # if (i+1) % 200 == 0:    # print every 2000 mini-batches
+                #     print('[Epoch: {}, Nr. Batch: {}]  , Train-Steps-loss: {:.1f} , running_acc: {:.1%}'.format(epoch , i+1 , train_steps_loss , batch_nr_correct / train_nr_total))
+                #     self.train_steps_acc = []
+                #     train_steps_loss = 0
+
+              #validation loss calculation
+            
+            for batch, (X, Y) in enumerate(self.valid_loader):
+                X = X.to(self.device)
+                Y = Y.to(self.device)
+                model.eval()
+                Y_pred = model(X)
+                loss_ = loss_fn(Y_pred, Y)
+                epoch_loss = loss_.item()
+                Y_pred = Y_pred.argmax(axis=1)
+                nr_correct = (Y_pred == Y).sum().item()
+                step_acc = nr_correct / batch_size
+                steps_val_Acc.append(step_acc)
+                steps_val_loss.append(epoch_loss)
+                
+            #Test Set Performance
+            for batch, (X, Y) in enumerate(self.test_loader):
+                X = X.to(self.device)
+                Y = Y.to(self.device)
+                model.eval()
+                Y_pred = model(X)
+                loss_ = loss_fn(Y_pred, Y)
+                epoch_loss = loss_.item()
+                Y_pred = Y_pred.argmax(axis=1)
+                nr_correct = (Y_pred == Y).sum().item()
+                step_acc = nr_correct / batch_size
+                steps_test_Acc.append(step_acc)
+                steps_test_loss.append(epoch_loss)
+
+            # Epoch Performance Metrics
+            train_epoch_loss = mean(steps_train_loss)
+            train_epoch_Acc = mean(steps_train_Acc)
+            self.Epochs_Train_loss.append(train_epoch_loss)
+            self.Epochs_Train_Acc.append(train_epoch_Acc)   
+            val_epoch_loss = mean(steps_val_loss)
+            val_epoch_Acc = mean(steps_val_Acc)
+            self.Epochs_Val_loss.append(val_epoch_loss)
+            self.Epochs_Val_Acc.append(val_epoch_Acc)
+            test_epoch_loss = mean(steps_test_loss)
+            test_epoch_Acc = mean(steps_test_Acc)           
+            self.Epochs_test_loss.append(test_epoch_loss)
+            self.Epochs_test_Acc.append(test_epoch_Acc)
+            End_time = time.time() 
+
+            if val_epoch_loss < min_loss:
+              min_loss = val_epoch_loss
+              pickle.dump(model,open('Best_Model','wb'))
+              iters = 0
+            else:
+              iters +=1
+     
+            if iters > self.patience:
+              model = pickle.load(open('Best_Model','rb'))
+              print(f'Earlt Stoppo happen at Epoche {epoch} after no improvment of {iters} epochs ')
+              break
+
+            if self.print_epochs:
+                print(f'[Epoch: {epoch}]  , Train_loss: {train_epoch_loss:.1f} , Train_Acc: {train_epoch_Acc:.1%}, Val_loss: {val_epoch_loss:.1f} , Val_Acc: {val_epoch_Acc:.1%}, Test_Acc: {test_epoch_Acc:.1%}  , run time: {np.round(End_time - start_time, 2)}')
+        # print('Finished Training')
+
+
+
 def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , Y_train,X_valid,Y_valid,X_test, Y_test,nr_repeat ):
 
     Param_Details = pd.DataFrame(columns=['hyper_param','valid_recall_weighed','test_recall_weighed'
@@ -243,58 +449,3 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
     print(sk.metrics.classification_report(Y_test,Y_pred))
     print('Best param: ' , best_param)
     return Best_Model, Param_Details
-
-def fpr_tpr_score(Y_OneH,Y_pred_prob):
-    fpr = dict()
-    tpr = dict()
-    roc_auc = dict()
-    thresh = dict()
-    n_classes = Y_OneH.shape[1]
-    
-    for i in range(n_classes):
-        fpr[i], tpr[i], _ = sk.metrics.roc_curve(Y_OneH[:, i], Y_pred_prob[:, i])
-        roc_auc[i] = sk.metrics.auc(fpr[i], tpr[i])
-    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
-    # Compute micro-average ROC curve and ROC area
-    fpr["micro"], tpr["micro"], _ = sk.metrics.roc_curve(Y_OneH.ravel(), Y_pred_prob.ravel())
-    roc_auc["micro"] = sk.metrics.auc(fpr["micro"], tpr["micro"])       
-    # Then interpolate all ROC curves at this points
-    mean_tpr = np.zeros_like(all_fpr)
-    for i in range(n_classes):
-        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
-
-    # Finally average it and compute AUC
-    mean_tpr /= n_classes
-
-    fpr["macro"] = all_fpr
-    tpr["macro"] = mean_tpr
-    roc_auc["macro"] = sk.metrics.auc(fpr["macro"], tpr["macro"])
-    return fpr, tpr, roc_auc
-
-# Process of plotting roc-auc curve belonging to all classes.
-def plot_roc_auc_multi(fpr, tpr, roc_auc):
-
-    n_classes = fpr.keys().__len__() -2
-
-    # Plot all ROC curves
-    fig = plt.figure(figsize=(7,5))
-    plt.plot(fpr["micro"], tpr["micro"],
-            label=f'micro ({roc_auc["micro"]:0.2f})' 
-            ,color='deeppink', linestyle=':', linewidth=4)
-
-    plt.plot(fpr["macro"], tpr["macro"],
-            label=f'macro ({roc_auc["macro"]:0.2f})'
-            ,color='navy', linestyle=':', linewidth=4)
-
-    for i in range(n_classes):  
-        plt.plot(fpr[i], tpr[i], linestyle='--', 
-                label=f'{i} ({roc_auc[i]:0.2f})')
-
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('ROC: Multi-Class')
-    plt.legend(loc="lower right")
-    plt.show()
