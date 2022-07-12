@@ -1,13 +1,17 @@
 
 import sklearn as sk
 import sys
+import time
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from statistics import mean
+import torch
 import numpy as np
 from tqdm import tqdm
+from torch.utils.data import DataLoader
 import json
+import pickle
 
 def model_evaluation(Y,Y_pred,title='Confusion Matrix'):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
@@ -135,7 +139,7 @@ def plot_grid_results(model_):
     plt.show()
 
 
-def progressbar(n,tot, prefix="", size=60, out=sys.stdout):
+def progressbar(n,tot, prefix="", size=30, out=sys.stdout):
     count = tot
     def show(j):
         x = int(size*j/count)
@@ -200,7 +204,7 @@ def plot_roc_auc_multi(fpr, tpr, roc_auc):
     plt.legend(loc="lower right")
     plt.show()
 
-def recall_specificity(Y,Y_pred, type):
+def recall_specificity(Y,Y_pred):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
     FP = CM.sum(axis=0) - np.diag(CM) 
     FN = CM.sum(axis=1) - np.diag(CM)
@@ -224,7 +228,7 @@ def recall_specificity(Y,Y_pred, type):
 
 class Model_Training_with_loader:
 
-    def __init__(self, Net, Drop, LR, batch_size , Momentum, epochs,patience, weight_decay, loss_func, opt_func,w_sampler, trainDataset, validDataset,testDataset, X_test,Y_test, print_epochs,hyper_params,device):    
+    def __init__(self, Net, Drop, LR, batch_size , Momentum, epochs,patience, weight_decay, loss_func, opt_func,w_sampler, trainDataset, validDataset,testDataset, print_epochs,hyper_params,device):    
         
         self.model = Net(Drop).to(device)
         if opt_func is torch.optim.Adam:
@@ -244,12 +248,11 @@ class Model_Training_with_loader:
         self.Epochs_test_loss = []
         self.Epochs_test_Acc = []
         self.hyper_params = hyper_params
-        self.Y_test = Y_test
-        self.X_test = X_test
         self.train_loader = DataLoader(dataset = trainDataset , sampler = w_sampler, batch_size = self.batch_size, num_workers=4)
         self.valid_loader = DataLoader(dataset = validDataset , shuffle=True, batch_size = self.batch_size, num_workers=2)
         self.test_loader = DataLoader(dataset = testDataset , shuffle=True, batch_size = self.batch_size, num_workers=2)
         self.device = device
+        print('\n')
 
     def train(self):
         
@@ -261,7 +264,7 @@ class Model_Training_with_loader:
         iters = 0
 
         for epoch in range(1, self.epochs+1 ):
-            start_time=time.time()
+            start_time = time.time()
             steps_train_loss = []
             steps_train_Acc = []
             steps_val_loss = []
@@ -449,3 +452,67 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
     print(sk.metrics.classification_report(Y_test,Y_pred))
     print('Best param: ' , best_param)
     return Best_Model, Param_Details
+
+class progressbar:
+  pre = ' '
+  post1 = ' '
+  post2 = ' '
+  init_time = time.time()
+  def set_pre_description(s):
+    progressbar.pre = s
+  def set_first_description(s):
+    progressbar.post1 = s
+  def set_second_description(s):
+    progressbar.post2 = s
+  def bar(n,tot, prefix="", size=30, out=sys.stdout, show_time=True):
+      current_time = time.time()
+      time_cost = current_time - progressbar.init_time
+      progressbar.init_time = time.time()
+      count = tot
+      def show(j):
+          x = int(size*j/count)
+          if show_time:
+            out.write(f'\r {progressbar.pre} [{u"█"*x}{"."*(size-x)}] {j}/{count} [time: {time_cost:.1f}s] {progressbar.post1} {progressbar.post2}')
+          else:
+            out.write(f'\r {progressbar.pre} [{u"█"*x}{"."*(size-x)}] {j}/{count}  {progressbar.post1} {progressbar.post2}')
+          out.flush()        
+      show(0)
+      show(n)
+      out.flush()
+
+def plot_cnn_loss_accuracy(model_):
+    epochs_X = [i for i in range(1, len(model_.Epochs_Train_loss)+1)]
+    fig, axs = plt.subplots(1,2,figsize=(14,4))
+    axs[0].plot(epochs_X , model_.Epochs_Train_loss , 'bo-', label='Train loss')
+    axs[0].plot(epochs_X , model_.Epochs_Val_loss,'ro-', label='Validation loss')
+    axs[0].plot(epochs_X , model_.Epochs_test_loss,'go-', label='Test loss')
+    axs[0].set_xlabel("Epochs", fontsize = 12)
+    axs[0].set_ylabel("Loss", fontsize = 12)
+    axs[0].grid()
+    axs[0].legend()
+    axs[0].set_title('Train and Validation loss by epochs', fontsize = 14)
+    axs[1].plot(epochs_X , model_.Epochs_Train_Acc , 'bo-', label='Train Accuracy')
+    axs[1].plot(epochs_X , model_.Epochs_Val_Acc ,'ro-', label='Validation Accuracy')
+    axs[1].plot(epochs_X , model_.Epochs_test_Acc ,'go-', label='Test Accuracy')
+    axs[1].set_xlabel("Epochs", fontsize = 12)
+    axs[1].set_ylabel("Accuracy", fontsize = 12)
+    axs[1].grid()
+    axs[1].legend()
+    axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
+    plt.show()
+
+def recall_specificity_precision(Y,Y_pred, weighted_avg):
+    CM = sk.metrics.confusion_matrix(Y,Y_pred)
+    FP = CM.sum(axis=0) - np.diag(CM) 
+    FN = CM.sum(axis=1) - np.diag(CM)
+    TP = np.diag(CM)
+    TN = CM.sum() - (FP + FN + TP)
+    weights = CM.sum(axis=1) / CM.sum() 
+    Accuracy = np.nan_to_num((TP+TN)/(TP+FP+FN+TN) , nan=0)
+    Recall = np.nan_to_num(TP/(TP+FN) , nan=0)
+    Specificity = np.nan_to_num(TN/(TN+FP) , nan=0)
+    Precision = np.nan_to_num(TP/(TP+FP) , nan=0)
+    if weighted_avg:
+        return round(sum(weights*Recall),3), round(sum(weights*Specificity),3), round(sum(weights*Precision),3)
+    else:
+        return round(mean(Recall),3), round(mean(Specificity),3), round(mean(Precision),3)
