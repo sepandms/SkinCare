@@ -12,20 +12,22 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 import json
 import pickle
+from datetime import datetime
 
-def model_evaluation(Y,Y_pred,title='Confusion Matrix'):
+def model_evaluation(Y,Y_pred,title='Confusion Matrix', plot_CM=True):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
-    print('Nr. of Data : \n', CM.sum())
-    print('Accuracy of The Model : \n', np.diag(CM).sum()/CM.sum())
-    disp = sk.metrics.ConfusionMatrixDisplay(CM)
-    disp.plot()
-    disp.im_.colorbar.remove()
-    font = {'size'   : 14}
-    plt.rc('font', **font)
-    plt.title(title, fontsize = 16)
-    plt.xlabel('Predicted', fontsize = 14)
-    plt.ylabel('True', fontsize = 14)
-    plt.show()
+    if plot_CM:
+        print('Nr. of Data : \n', CM.sum())
+        print('Accuracy of The Model : \n', np.diag(CM).sum()/CM.sum())
+        disp = sk.metrics.ConfusionMatrixDisplay(CM)
+        disp.plot()
+        disp.im_.colorbar.remove()
+        font = {'size'   : 14}
+        plt.rc('font', **font)
+        plt.title(title, fontsize = 16)
+        plt.xlabel('Predicted', fontsize = 14)
+        plt.ylabel('True', fontsize = 14)
+        plt.show()
     FP = CM.sum(axis=0) - np.diag(CM) 
     FN = CM.sum(axis=1) - np.diag(CM)
     TP = np.diag(CM)
@@ -101,7 +103,7 @@ def label_to_binary(entry):
 label_to_binary = np.vectorize(label_to_binary)
 
 
-def recall_specificity_precision(Y,Y_pred, weighted_avg):
+def recall_specificity_precision_fscore(Y,Y_pred, weighted_avg=True):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
     FP = CM.sum(axis=0) - np.diag(CM) 
     FN = CM.sum(axis=1) - np.diag(CM)
@@ -113,9 +115,9 @@ def recall_specificity_precision(Y,Y_pred, weighted_avg):
     Specificity = np.nan_to_num(TN/(TN+FP) , nan=0)
     Precision = np.nan_to_num(TP/(TP+FP) , nan=0)
     if weighted_avg:
-        return round(sum(weights*Recall),3), round(sum(weights*Specificity),3), round(sum(weights*Precision),3)
+        return round(sum(weights*Recall),3), round(sum(weights*Specificity),3), round(sum(weights*Precision),3), round( sum(weights * (2*Recall*Precision/sum(Recall*Precision))) ,3)
     else:
-        return round(mean(Recall),3), round(mean(Specificity),3), round(mean(Precision),3)
+        return round(mean(Recall),3), round(mean(Specificity),3), round(mean(Precision),3) ,  round( mean((2*Recall*Precision/sum(Recall*Precision))) ,3)
 
 def plot_grid_results(model_):
     epochs_X = [i for i in range(1, len( list(model_['train_epoch_loss'])[0]) +1)]
@@ -138,16 +140,63 @@ def plot_grid_results(model_):
     axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
     plt.show()
 
+def plot_grid_results2(model_):
+    epochs_X = [i for i in range(1, len( list(model_['train_epoch_loss'])[0]) +1)]
+    fig, axs = plt.subplots(1,3,figsize=(24,4.5))
+    axs[0].plot(epochs_X , list(model_.train_epoch_loss)[0] , 'bo-', label='Train loss')
+    axs[0].plot(epochs_X , list(model_.valid_epoch_loss)[0],'ro-', label='Validation loss')
+    axs[0].plot(epochs_X , list(model_.test_epoch_loss)[0],'go-', label='Test loss')
+    axs[0].set_xlabel("Epochs", fontsize = 12)
+    axs[0].set_ylabel("Loss", fontsize = 12)
+    axs[0].grid()
+    axs[0].legend()
+    axs[0].set_title('Train and Validation loss by epochs', fontsize = 14)
+    axs[1].plot(epochs_X , list(model_.train_epoch_acc)[0] , 'bo-', label='Train Accuracy')
+    axs[1].plot(epochs_X , list(model_.valid_epoch_acc)[0] ,'ro-', label='Validation Accuracy')
+    axs[1].plot(epochs_X , list(model_.test_epoch_acc)[0] ,'go-', label='Test Accuracy')
+    axs[1].set_xlabel("Epochs", fontsize = 12)
+    axs[1].set_ylabel("Accuracy", fontsize = 12)
+    axs[1].grid()
+    axs[1].legend()
+    axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
+    
 
-def progressbar(n,tot, prefix="", size=30, out=sys.stdout):
-    count = tot
-    def show(j):
-        x = int(size*j/count)
-        out.write("%s[%s%s] %i/%i\r" % (prefix, u"█"*x, "."*(size-x), j, count))
-        out.flush()        
-    show(0)
-    show(n)
-    out.flush()
+    fpr, tpr, roc_auc = model_['test_fpr'][0], model_['test_tpr'][0], model_['test_roc_auc'][0]
+    n_classes = fpr.keys().__len__() -2
+
+    # Plot all ROC curves
+    # fig = plt.figure(figsize=(7,5))
+    axs[2].plot(fpr["micro"], tpr["micro"],
+            label=f'micro ({roc_auc["micro"]:0.2f})' 
+            ,color='deeppink', linestyle=':', linewidth=4)
+
+    axs[2].plot(fpr["macro"], tpr["macro"],
+            label=f'macro ({roc_auc["macro"]:0.2f})'
+            ,color='navy', linestyle=':', linewidth=4)
+
+    for i in range(n_classes):  
+        axs[2].plot(fpr[i], tpr[i], linestyle='--', 
+                label=f'{i} ({roc_auc[i]:0.2f})')
+
+    axs[2].plot([0, 1], [0, 1], 'k--')
+    axs[2].set_xlim([0.0, 1.0])
+    axs[2].set_ylim([0.0, 1.05])
+    axs[2].set_xlabel('False Positive Rate')
+    axs[2].set_ylabel('True Positive Rate')
+    axs[2].set_title('ROC: Multi-Class')
+    axs[2].legend(loc="lower right")
+    plt.show()
+
+
+# def progressbar(n,tot, prefix="", size=30, out=sys.stdout):
+#     count = tot
+#     def show(j):
+#         x = int(size*j/count)
+#         out.write("%s[%s%s] %i/%i\r" % (prefix, u"█"*x, "."*(size-x), j, count))
+#         out.flush()        
+#     show(0)
+#     show(n)
+#     out.flush()
 
 def fpr_tpr_score(Y_OneH,Y_pred_prob):
     fpr = dict()
@@ -356,22 +405,26 @@ class Model_Training_with_loader:
 
 def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , Y_train,X_valid,Y_valid,X_test, Y_test,nr_repeat ):
 
-    Param_Details = pd.DataFrame(columns=['hyper_param','valid_recall_weighed','test_recall_weighed'
+    Param_Details = pd.DataFrame(columns=['hyper_param','valid_recall_weighted','test_recall_weighted'
                                   ,'valid_recall_simple','test_recall_simple'
                                   ,'valid_specificity_weighed','test_specificity_weighed'
                                   ,'valid_specificity_simple','test_specificity_simple','train_index','valid_index'])
     
+    bar = progressbar()
     grid_params = sk.model_selection.ParameterGrid(grid)
     if cross_valid:
         total_iter = nr_repeat*len(grid_params)*kflods.get_n_splits()
     else: total_iter = nr_repeat*len(grid_params)
     iter = 1
+
+    max_test_accuracy = 0
+    max_test_fscore = 0
+    max_valid_accuracy = 0
+    max_valid_fscore = 0
+
     for i in range(nr_repeat):
         for g in grid_params:
-            test_accuracy = []
-            test_fscore = []
-            test_precision = []
-            test_recall = []
+
             train_index = None
             valid_index = None
             if cross_valid:
@@ -379,7 +432,7 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                 training_label = np.concatenate((Y_train,Y_valid ))
                 
                 for fold, (train_index, valid_index) in enumerate(kflods.split(training_data,training_label)):
-                    progressbar(iter,total_iter, "Interations: ", 100)
+                    bar.bar(iter,total_iter, size=50)
                     iter +=1
                     x_train_ = training_data[train_index]
                     y_train_ = training_label[train_index]
@@ -392,21 +445,32 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                     # Valid
                     Y_pred = Model_.predict(x_valid_)
                     Y = y_valid_
-                    valid_recall_weighed, valid_specificity_weighed, _ = recall_specificity_precision(Y,Y_pred,weighted_avg=True)
-                    valid_recall_simple, valid_specificity_simple, _ = recall_specificity_precision(Y,Y_pred,weighted_avg=False)
+                    valid_recall_weighted, valid_specificity_weighed, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
+                    
+                    valid_recall_simple, valid_specificity_simple, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
                     # Test
                     Y_pred = Model_.predict(X_test)
                     Y = Y_test
-                    test_recall_weighed, test_specificity_weighed, _ = recall_specificity_precision(Y,Y_pred,weighted_avg=True)
-                    test_recall_simple, test_specificity_simple, _ = recall_specificity_precision(Y,Y_pred,weighted_avg=False)
+                    test_recall_weighted, test_specificity_weighed, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
+                    test_recall_simple, test_specificity_simple, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
 
-                    new_row = pd.Series({'hyper_param':g,'valid_recall_weighed':valid_recall_weighed,'test_recall_weighed':test_recall_weighed
+                    new_row = pd.Series({'hyper_param':g,'valid_recall_weighted':valid_recall_weighted,'test_recall_weighted':test_recall_weighted
                                         ,'valid_recall_simple':valid_recall_simple,'test_recall_simple':test_recall_simple
                                         ,'valid_specificity_weighed':valid_specificity_weighed,'test_specificity_weighed':test_specificity_weighed
                                         ,'valid_specificity_simple':valid_specificity_simple,'test_specificity_simple':test_specificity_simple,'train_index':train_index,'valid_index':valid_index}, name='')
                     Param_Details = Param_Details.append(new_row)
+
+                    if valid_recall_weighted > max_valid_accuracy: 
+                        max_valid_accuracy = valid_recall_weighted
+                        Expected_Test_Acc = test_recall_weighted
+                        pickle.dump(Model_ , open('Best_Model','wb'))
+                    if test_recall_weighted > max_test_accuracy: 
+                        max_test_accuracy = test_recall_weighted                        
+                    bar.bar(iter,total_iter, size=30)
+                    bar.set_pre_description(f'Max_Valid_Acc.: {max_valid_accuracy:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
+
             else:
-                    progressbar(iter,total_iter, "Interations: ", 100)
+                    
                     iter +=1
                     x_train_ = X_train
                     y_train_ = Y_train
@@ -419,62 +483,79 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                     # Valid
                     Y_pred = Model_.predict(x_valid_)
                     Y = y_valid_
-                    valid_recall_weighed, valid_specificity_weighed, _ = recall_specificity_precision(Y,Y_pred,weighted_avg=True)
-                    valid_recall_simple, valid_specificity_simple, _ = recall_specificity_precision(Y,Y_pred,weighted_avg=False)
+                    valid_recall_weighted, valid_specificity_weighed, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
+                    valid_recall_simple, valid_specificity_simple, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
                     # Test
                     Y_pred = Model_.predict(X_test)
                     Y = Y_test
-                    test_recall_weighed, test_specificity_weighed, _ = recall_specificity_precision(Y,Y_pred,weighted_avg=True)
-                    test_recall_simple, test_specificity_simple, _ = recall_specificity_precision(Y,Y_pred,weighted_avg=False)
+                    test_recall_weighted, test_specificity_weighed, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
+                    test_recall_simple, test_specificity_simple, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
 
-                    new_row = pd.Series({'hyper_param':g,'valid_recall_weighed':valid_recall_weighed,'test_recall_weighed':test_recall_weighed
+                    new_row = pd.Series({'hyper_param':g,'valid_recall_weighted':valid_recall_weighted,'test_recall_weighted':test_recall_weighted
                                         ,'valid_recall_simple':valid_recall_simple,'test_recall_simple':test_recall_simple
                                         ,'valid_specificity_weighed':valid_specificity_weighed,'test_specificity_weighed':test_specificity_weighed
                                         ,'valid_specificity_simple':valid_specificity_simple,'test_specificity_simple':test_specificity_simple,'train_index':train_index,'valid_index':valid_index}, name='')
                     Param_Details = Param_Details.append(new_row)
 
+                    if valid_recall_weighted > max_valid_accuracy: 
+                        max_valid_accuracy = valid_recall_weighted
+                        Expected_Test_Acc = test_recall_weighted
+                        pickle.dump(Model_ , open('Best_Model','wb'))
+                    if test_recall_weighted > max_test_accuracy: 
+                        max_test_accuracy = test_recall_weighted                        
+                    bar.bar(iter,total_iter, size=30)
+                    bar.set_pre_description(f'Max_Valid_Acc.: {max_valid_accuracy:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
 
-    best_one = np.argmax(Param_Details.test_recall_weighed)
+    Best_Model = pickle.load(open('Best_Model','rb'))
+   
+    best_one = np.argmax(Param_Details.valid_recall_weighted)
     best_param = Param_Details.iloc[best_one]['hyper_param']
-    best_train_index = Param_Details.iloc[best_one]['train_index'] 
-    best_valid_index = Param_Details.iloc[best_one]['valid_index']  
-    if cross_valid:
-            x_train_ = training_data[best_train_index]
-            y_train_ = training_label[best_train_index]
-            x_valid_ = training_data[best_valid_index]
-            y_valid_ = training_label[best_valid_index]
+    # best_train_index = Param_Details.iloc[best_one]['train_index'] 
+    # best_valid_index = Param_Details.iloc[best_one]['valid_index']  
+    # if cross_valid:
+    #         x_train_ = training_data[best_train_index]
+    #         y_train_ = training_label[best_train_index]
+    #         x_valid_ = training_data[best_valid_index]
+    #         y_valid_ = training_label[best_valid_index]
 
-    Best_Model = Model_.set_params(**best_param)
-    Best_Model.fit(x_train_, y_train_)
+    # Best_Model = Model_.set_params(**best_param)
+    # Best_Model.fit(x_train_, y_train_)
     Y_pred = Best_Model.predict(X_test)
     Param_Details['hyper_param'] = Param_Details['hyper_param'].apply(lambda x: json.dumps(x))
-    print('------- Precision recal %--------')
+    print('\n------- Precision recal %--------')
     print(sk.metrics.classification_report(Y_test,Y_pred))
     print('Best param: ' , best_param)
     return Best_Model, Param_Details
 
 class progressbar:
-  pre = ' '
-  post1 = ' '
-  post2 = ' '
-  init_time = time.time()
-  def set_pre_description(s):
-    progressbar.pre = s
-  def set_first_description(s):
-    progressbar.post1 = s
-  def set_second_description(s):
-    progressbar.post2 = s
-  def bar(n,tot, prefix="", size=30, out=sys.stdout, show_time=True):
+  def __init__(self):
+    self.pre = ' '
+    self.post1 = ' '
+    self.post2 = ' '
+    self.start_time = time.time()
+    self.init_time = time.time()
+  def set_pre_description(self,s):
+    self.pre = s
+  def set_first_description(self,s):
+    self.post1 = s
+  def set_second_description(self,s):
+    self.post2 = s
+  def bar(self,n,tot, prefix="", size=30, out=sys.stdout, show_time=True):
       current_time = time.time()
-      time_cost = current_time - progressbar.init_time
-      progressbar.init_time = time.time()
+      time_cost = current_time - self.init_time
+      total_time = current_time -self.start_time 
+      if n==0:
+        remaining_time = (tot-n)/(n+1) * total_time
+      else:
+        remaining_time = (tot-n)/(n) * total_time
+      self.init_time = time.time()
       count = tot
       def show(j):
           x = int(size*j/count)
           if show_time:
-            out.write(f'\r {progressbar.pre} [{u"█"*x}{"."*(size-x)}] {j}/{count} [time: {time_cost:.1f}s] {progressbar.post1} {progressbar.post2}')
+            out.write(f'\r {self.pre} [{u"█"*x}{"."*(size-x)}] {j}/{count} [Time => Iter.: {time_cost:.1f}s, Tot.: {total_time:.1f}s, Remain.: {remaining_time:.1f}s] {self.post1} {self.post2}')
           else:
-            out.write(f'\r {progressbar.pre} [{u"█"*x}{"."*(size-x)}] {j}/{count}  {progressbar.post1} {progressbar.post2}')
+            out.write(f'\r {self.pre} [{u"█"*x}{"."*(size-x)}] {j}/{count}  {self.post1} {self.post2}')
           out.flush()        
       show(0)
       show(n)
@@ -501,7 +582,7 @@ def plot_cnn_loss_accuracy(model_):
     axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
     plt.show()
 
-def recall_specificity_precision(Y,Y_pred, weighted_avg):
+def recall_specificity_precision_fscore(Y,Y_pred, weighted_avg):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
     FP = CM.sum(axis=0) - np.diag(CM) 
     FN = CM.sum(axis=1) - np.diag(CM)
