@@ -115,9 +115,9 @@ def recall_specificity_precision_fscore(Y,Y_pred, weighted_avg=True):
     Specificity = np.nan_to_num(TN/(TN+FP) , nan=0)
     Precision = np.nan_to_num(TP/(TP+FP) , nan=0)
     if weighted_avg:
-        return round(sum(weights*Recall),3), round(sum(weights*Specificity),3), round(sum(weights*Precision),3), round( sum(weights * (2*Recall*Precision/sum(Recall*Precision))) ,3)
+        return round(sum(weights*Recall),3), round(sum(weights*Specificity),3), round(sum(weights*Precision),3), round( sum(weights * (2*Recall*Precision/(Recall+Precision))) ,3)
     else:
-        return round(mean(Recall),3), round(mean(Specificity),3), round(mean(Precision),3) ,  round( mean((2*Recall*Precision/sum(Recall*Precision))) ,3)
+        return round(mean(Recall),3), round(mean(Specificity),3), round(mean(Precision),3) ,  round( mean((2*Recall*Precision/(Recall+Precision))) ,3)
 
 def plot_grid_results(model_):
     epochs_X = [i for i in range(1, len( list(model_['train_epoch_loss'])[0]) +1)]
@@ -403,7 +403,7 @@ class Model_Training_with_loader:
 
 
 
-def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , Y_train,X_valid,Y_valid,X_test, Y_test,nr_repeat ):
+def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , Y_train,X_valid,Y_valid,X_test, Y_test,nr_repeat,best_selection='recall' ):
 
     Param_Details = pd.DataFrame(columns=['hyper_param','valid_recall_weighted','test_recall_weighted'
                                   ,'valid_recall_simple','test_recall_simple'
@@ -421,6 +421,7 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
     max_test_fscore = 0
     max_valid_accuracy = 0
     max_valid_fscore = 0
+    Expected_Test_Acc = 0
 
     for i in range(nr_repeat):
         for g in grid_params:
@@ -432,8 +433,8 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                 training_label = np.concatenate((Y_train,Y_valid ))
                 
                 for fold, (train_index, valid_index) in enumerate(kflods.split(training_data,training_label)):
-                    bar.bar(iter,total_iter, size=50)
-                    iter +=1
+                    
+                    
                     x_train_ = training_data[train_index]
                     y_train_ = training_label[train_index]
                     x_valid_ = training_data[valid_index]
@@ -445,33 +446,42 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                     # Valid
                     Y_pred = Model_.predict(x_valid_)
                     Y = y_valid_
-                    valid_recall_weighted, valid_specificity_weighed, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
+                    valid_recall_weighted, valid_specificity_weighed, _ ,valid_fscore_weighted = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
                     
-                    valid_recall_simple, valid_specificity_simple, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
+                    valid_recall_simple, valid_specificity_simple, _ ,valid_fscore_simple = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
                     # Test
                     Y_pred = Model_.predict(X_test)
                     Y = Y_test
-                    test_recall_weighted, test_specificity_weighed, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
-                    test_recall_simple, test_specificity_simple, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
+                    test_recall_weighted, test_specificity_weighed, _ ,test_fscore_weighted = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
+                    test_recall_simple, test_specificity_simple, _ ,test_fscore_simple = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
 
                     new_row = pd.Series({'hyper_param':g,'valid_recall_weighted':valid_recall_weighted,'test_recall_weighted':test_recall_weighted
                                         ,'valid_recall_simple':valid_recall_simple,'test_recall_simple':test_recall_simple
                                         ,'valid_specificity_weighed':valid_specificity_weighed,'test_specificity_weighed':test_specificity_weighed
                                         ,'valid_specificity_simple':valid_specificity_simple,'test_specificity_simple':test_specificity_simple,'train_index':train_index,'valid_index':valid_index}, name='')
                     Param_Details = Param_Details.append(new_row)
-
-                    if valid_recall_weighted > max_valid_accuracy: 
-                        max_valid_accuracy = valid_recall_weighted
-                        Expected_Test_Acc = test_recall_weighted
-                        pickle.dump(Model_ , open('Best_Model','wb'))
-                    if test_recall_weighted > max_test_accuracy: 
-                        max_test_accuracy = test_recall_weighted                        
-                    bar.bar(iter,total_iter, size=30)
-                    bar.set_pre_description(f'Max_Valid_Acc.: {max_valid_accuracy:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
-
+                    if best_selection == 'recall':
+                        if valid_recall_weighted > max_valid_accuracy: 
+                            max_valid_accuracy = valid_recall_weighted
+                            Expected_Test_Acc = test_recall_weighted
+                            pickle.dump(Model_ , open('./Best_Model_','wb'))
+                        if test_recall_weighted > max_test_accuracy: 
+                            max_test_accuracy = test_recall_weighted                        
+                        bar.bar(iter,total_iter, size=30)
+                        bar.set_pre_description(f'Max_Valid_Acc.: {max_valid_accuracy:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
+                    else:
+                        if valid_fscore_weighted > max_valid_fscore: 
+                            max_valid_fscore = valid_fscore_weighted
+                            Expected_Test_Acc = test_recall_weighted
+                            pickle.dump(Model_ , open('./Best_Model_','wb'))
+                        if test_recall_weighted > max_test_accuracy: 
+                            max_test_accuracy = test_recall_weighted                        
+                        bar.bar(iter,total_iter, size=30)
+                        bar.set_pre_description(f'Max_Valid_fsc.: {max_valid_fscore:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
+                    iter +=1
             else:
                     
-                    iter +=1
+                    
                     x_train_ = X_train
                     y_train_ = Y_train
                     x_valid_ = X_valid
@@ -483,13 +493,14 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                     # Valid
                     Y_pred = Model_.predict(x_valid_)
                     Y = y_valid_
-                    valid_recall_weighted, valid_specificity_weighed, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
-                    valid_recall_simple, valid_specificity_simple, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
+                    valid_recall_weighted, valid_specificity_weighed, _ ,valid_fscore_weighted = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
+                    
+                    valid_recall_simple, valid_specificity_simple, _ ,valid_fscore_simple = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
                     # Test
                     Y_pred = Model_.predict(X_test)
                     Y = Y_test
-                    test_recall_weighted, test_specificity_weighed, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
-                    test_recall_simple, test_specificity_simple, _ = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
+                    test_recall_weighted, test_specificity_weighed, _ ,test_fscore_weighted = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=True)
+                    test_recall_simple, test_specificity_simple, _ ,test_fscore_simple = recall_specificity_precision_fscore(Y,Y_pred,weighted_avg=False)
 
                     new_row = pd.Series({'hyper_param':g,'valid_recall_weighted':valid_recall_weighted,'test_recall_weighted':test_recall_weighted
                                         ,'valid_recall_simple':valid_recall_simple,'test_recall_simple':test_recall_simple
@@ -497,17 +508,29 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                                         ,'valid_specificity_simple':valid_specificity_simple,'test_specificity_simple':test_specificity_simple,'train_index':train_index,'valid_index':valid_index}, name='')
                     Param_Details = Param_Details.append(new_row)
 
-                    if valid_recall_weighted > max_valid_accuracy: 
-                        max_valid_accuracy = valid_recall_weighted
-                        Expected_Test_Acc = test_recall_weighted
-                        pickle.dump(Model_ , open('Best_Model','wb'))
-                    if test_recall_weighted > max_test_accuracy: 
-                        max_test_accuracy = test_recall_weighted                        
-                    bar.bar(iter,total_iter, size=30)
-                    bar.set_pre_description(f'Max_Valid_Acc.: {max_valid_accuracy:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
+                    if best_selection == 'recall':
+                        if valid_recall_weighted > max_valid_accuracy: 
+                            max_valid_accuracy = valid_recall_weighted
+                            Expected_Test_Acc = test_recall_weighted
+                            pickle.dump(Model_ , open('./Best_Model_','wb'))
+                        if test_recall_weighted > max_test_accuracy: 
+                            max_test_accuracy = test_recall_weighted                        
+                        bar.bar(iter,total_iter, size=30)
+                        bar.set_pre_description(f'Max_Valid_Acc.: {max_valid_accuracy:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
+                    else:
+                        if valid_fscore_weighted > max_valid_fscore: 
+                            max_valid_fscore = valid_fscore_weighted
+                            Expected_Test_Acc = test_recall_weighted
+                            pickle.dump(Model_ , open('./Best_Model_','wb'))
+                        if test_recall_weighted > max_test_accuracy: 
+                            max_test_accuracy = test_recall_weighted                        
+                        bar.bar(iter,total_iter, size=30)
+                        bar.set_pre_description(f'Max_Valid_fsc.: {max_valid_fscore:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
+                    iter +=1
 
-    Best_Model = pickle.load(open('Best_Model','rb'))
-   
+    Best_Model = pickle.load(open('./Best_Model_','rb'))
+    del './Best_Model_'
+
     best_one = np.argmax(Param_Details.valid_recall_weighted)
     best_param = Param_Details.iloc[best_one]['hyper_param']
     # best_train_index = Param_Details.iloc[best_one]['train_index'] 
@@ -581,19 +604,3 @@ def plot_cnn_loss_accuracy(model_):
     axs[1].legend()
     axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
     plt.show()
-
-def recall_specificity_precision_fscore(Y,Y_pred, weighted_avg):
-    CM = sk.metrics.confusion_matrix(Y,Y_pred)
-    FP = CM.sum(axis=0) - np.diag(CM) 
-    FN = CM.sum(axis=1) - np.diag(CM)
-    TP = np.diag(CM)
-    TN = CM.sum() - (FP + FN + TP)
-    weights = CM.sum(axis=1) / CM.sum() 
-    Accuracy = np.nan_to_num((TP+TN)/(TP+FP+FN+TN) , nan=0)
-    Recall = np.nan_to_num(TP/(TP+FN) , nan=0)
-    Specificity = np.nan_to_num(TN/(TN+FP) , nan=0)
-    Precision = np.nan_to_num(TP/(TP+FP) , nan=0)
-    if weighted_avg:
-        return round(sum(weights*Recall),3), round(sum(weights*Specificity),3), round(sum(weights*Precision),3)
-    else:
-        return round(mean(Recall),3), round(mean(Specificity),3), round(mean(Precision),3)
