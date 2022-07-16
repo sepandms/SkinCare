@@ -46,7 +46,7 @@ def model_evaluation(Y,Y_pred,title='Confusion Matrix', plot_CM=True):
     cols = ['weights','Precision','Recall_Sensitivity','Specificity','f1_score']
     per_details = Performance_DF[cols].style.format({'weights': "{:.1%}",'Precision': "{:.1%}",'Recall_Sensitivity': "{:.1%}",'Specificity': "{:.1%}",'f1_score': "{:.1%}"})
     return per_details
-
+############################# END ##########################
 
 def confusion_matrix(Y,Y_pred):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
@@ -71,7 +71,7 @@ def confusion_matrix(Y,Y_pred):
     cols = ['weights','Precision','Recall_Sensitivity','Specificity','f1_score']
     per_details = Performance_DF[cols].style.format({'weights': "{:.1%}",'Precision': "{:.1%}",'Recall_Sensitivity': "{:.1%}",'Specificity': "{:.1%}",'f1_score': "{:.1%}"})
     return per_details
-
+############################# END ##########################
 
 
 
@@ -95,13 +95,13 @@ def plot_loss_accuracy(model_):
     axs[1].legend()
     axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
     plt.show()
-
+############################# END ##########################
 
 remap = {0:1 , 1:1, 4:1, 2:0, 3:0, 5:0, 6:0}
 def label_to_binary(entry):
     return remap[entry] if entry in remap else entry
 label_to_binary = np.vectorize(label_to_binary)
-
+############################# END ##########################
 
 def recall_specificity_precision_fscore(Y,Y_pred, weighted_avg=True):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
@@ -118,6 +118,7 @@ def recall_specificity_precision_fscore(Y,Y_pred, weighted_avg=True):
         return round(sum(weights*Recall),3), round(sum(weights*Specificity),3), round(sum(weights*Precision),3), round( sum(weights * (2*Recall*Precision/(Recall+Precision))) ,3)
     else:
         return round(mean(Recall),3), round(mean(Specificity),3), round(mean(Precision),3) ,  round( mean((2*Recall*Precision/(Recall+Precision))) ,3)
+############################# END ##########################
 
 def plot_grid_results(model_):
     epochs_X = [i for i in range(1, len( list(model_['train_epoch_loss'])[0]) +1)]
@@ -139,6 +140,7 @@ def plot_grid_results(model_):
     axs[1].legend()
     axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
     plt.show()
+############################# END ##########################
 
 def plot_grid_results2(model_):
     epochs_X = [i for i in range(1, len( list(model_['train_epoch_loss'])[0]) +1)]
@@ -159,7 +161,7 @@ def plot_grid_results2(model_):
     axs[1].grid()
     axs[1].legend()
     axs[1].set_title('Train and Validation Accuracy by epochs', fontsize = 14)
-    
+############################# END ##########################
 
     fpr, tpr, roc_auc = model_['test_fpr'][0], model_['test_tpr'][0], model_['test_roc_auc'][0]
     n_classes = fpr.keys().__len__() -2
@@ -186,7 +188,7 @@ def plot_grid_results2(model_):
     axs[2].set_title('ROC: Multi-Class')
     axs[2].legend(loc="lower right")
     plt.show()
-
+############################# END ##########################
 
 # def progressbar(n,tot, prefix="", size=30, out=sys.stdout):
 #     count = tot
@@ -224,6 +226,7 @@ def fpr_tpr_score(Y_OneH,Y_pred_prob):
     tpr["macro"] = mean_tpr
     roc_auc["macro"] = sk.metrics.auc(fpr["macro"], tpr["macro"])
     return fpr, tpr, roc_auc
+############################# END ##########################
 
 # Process of plotting roc-auc curve belonging to all classes.
 def plot_roc_auc_multi(fpr, tpr, roc_auc):
@@ -252,6 +255,7 @@ def plot_roc_auc_multi(fpr, tpr, roc_auc):
     plt.title('ROC: Multi-Class')
     plt.legend(loc="lower right")
     plt.show()
+############################# END ##########################
 
 def recall_specificity(Y,Y_pred):
     CM = sk.metrics.confusion_matrix(Y,Y_pred)
@@ -272,7 +276,7 @@ def recall_specificity(Y,Y_pred):
     Performance_DF = Performance_DF.append([total_row1,total_row2])
     cols = ['weights','Precision','Recall_Sensitivity','Specificity','f1_score']
     return Performance_DF
-
+############################# END ##########################
 
 
 class Model_Training_with_loader:
@@ -400,7 +404,7 @@ class Model_Training_with_loader:
             if self.print_epochs:
                 print(f'[Epoch: {epoch}]  , Train_loss: {train_epoch_loss:.1f} , Train_Acc: {train_epoch_Acc:.1%}, Val_loss: {val_epoch_loss:.1f} , Val_Acc: {val_epoch_Acc:.1%}, Test_Acc: {test_epoch_Acc:.1%}  , run time: {np.round(End_time - start_time, 2)}')
         # print('Finished Training')
-
+############################# END ##########################
 
 
 def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , Y_train,X_valid,Y_valid,X_test, Y_test,nr_repeat,best_selection='recall' ):
@@ -527,10 +531,8 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
                         bar.bar(iter,total_iter, size=30)
                         bar.set_pre_description(f'Max_Valid_fsc.: {max_valid_fscore:.1%}, Max_Test_Acc.: {max_test_accuracy:.1%}, Expected_test_Acc.: {Expected_Test_Acc:.1%}')
                     iter +=1
-
     Best_Model = pickle.load(open('./Best_Model_','rb'))
     del './Best_Model_'
-
     best_one = np.argmax(Param_Details.valid_recall_weighted)
     best_param = Param_Details.iloc[best_one]['hyper_param']
     # best_train_index = Param_Details.iloc[best_one]['train_index'] 
@@ -540,7 +542,6 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
     #         y_train_ = training_label[best_train_index]
     #         x_valid_ = training_data[best_valid_index]
     #         y_valid_ = training_label[best_valid_index]
-
     # Best_Model = Model_.set_params(**best_param)
     # Best_Model.fit(x_train_, y_train_)
     Y_pred = Best_Model.predict(X_test)
@@ -549,6 +550,7 @@ def grid_searc_cross_valid_trainer(Model_, grid, cross_valid, kflods ,X_train , 
     print(sk.metrics.classification_report(Y_test,Y_pred))
     print('Best param: ' , best_param)
     return Best_Model, Param_Details
+############################# END ##########################
 
 class progressbar:
   def __init__(self):
@@ -583,6 +585,7 @@ class progressbar:
       show(0)
       show(n)
       out.flush()
+############################# END ##########################
 
 def plot_cnn_loss_accuracy(model_):
     epochs_X = [i for i in range(1, len(model_.Epochs_Train_loss)+1)]
